@@ -1,0 +1,106 @@
+.card {
+  display: block;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 8px 0;
+  max-width: 400px;
+  transition: all 0.2s;
+  text-decoration: none;
+  color: inherit;
+}
+
+.card:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.fileName {
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metadata {
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.thumbnail {
+  margin: 8px 0;
+  border-radius: 4px;
+  overflow: hidden;
+  max-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+}
+
+.thumbnail img {
+  max-width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.downloadButton {
+  padding: 6px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.downloadButton:hover {
+  background-color: #0056b3;
+}
+
+.viewLink {
+  font-size: 12px;
+  color: #007bff;
+  font-weight: 500;
+}
+
+.loading,
+.error {
+  padding: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+}

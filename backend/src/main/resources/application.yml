@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: messenger-backend
+
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mariadb://218.38.54.88:3306/message?useSSL=false&serverTimezone=UTC
+    username: root
+    password: wisecan
+
+  jpa:
+    hibernate:
+      ddl-auto: update  # ✅ 안전: 스키마 검증만, 변경 안함
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+        # 추가 안전장치
+        globally_quoted_identifiers: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+server:
+  port: 8080
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-change-in-production-at-least-256-bits-long-for-hs256}
+  access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600000}  # 1 hour
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000}  # 7 days
+
+# Elasticsearch Configuration
+elasticsearch:
+  host: ${ES_HOST:192.168.123.38}
+  port: ${ES_PORT:9200}
+
+# CORS Configuration
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+
+# RAG API Configuration
+rag:
+  api:
+    account-id: ${RAG_API_ACCOUNT_ID:1}
+    password: ${RAG_API_PASSWORD:1234}
+
+# MinIO Configuration
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://192.168.123.38:9000}
+  access-key: ${MINIO_ACCESS_KEY:root}
+  secret-key: ${MINIO_SECRET_KEY:#wisecan}
+  bucket-name: ${MINIO_BUCKET_NAME:messenger-avatars}
+  documents-bucket-name: ${MINIO_DOCUMENTS_BUCKET_NAME:messenger-documents}
+
+logging:
+  level:
+    com.messenger: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+    # Suppress harmless HTTP parsing errors (WebSocket binary frames sent to HTTP endpoint)
+    org.apache.coyote.http11.Http11Processor: ERROR
+    org.apache.tomcat.util.http.parser: ERROR

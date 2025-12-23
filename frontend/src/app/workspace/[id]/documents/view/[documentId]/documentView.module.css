@@ -1,0 +1,183 @@
+.container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.backButton {
+  padding: 8px 16px;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.backButton:hover {
+  background-color: #e0e0e0;
+}
+
+.loading,
+.error {
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+  color: #666;
+}
+
+.documentCard {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.documentHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.fileIcon {
+  font-size: 48px;
+  flex-shrink: 0;
+}
+
+.documentInfo {
+  flex: 1;
+}
+
+.fileName {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+  color: #333;
+  word-break: break-word;
+}
+
+.metadata {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+  color: #666;
+}
+
+.metadata span {
+  display: flex;
+  align-items: center;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.downloadButton {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.downloadButton:hover {
+  background-color: #0056b3;
+}
+
+.previewContainer {
+  margin-top: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.previewImage {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.previewPdf {
+  width: 100%;
+  height: 800px;
+  border: none;
+}
+
+.noPreview {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.noPreview p {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+.docxPreview {
+  padding: 20px;
+  background: white;
+  min-height: 600px;
+}
+
+.docxContent {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px;
+  background: white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.docxContent p {
+  margin-bottom: 1em;
+}
+
+.docxContent h1,
+.docxContent h2,
+.docxContent h3,
+.docxContent h4,
+.docxContent h5,
+.docxContent h6 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.docxContent ul,
+.docxContent ol {
+  margin-left: 20px;
+  margin-bottom: 1em;
+}
+
+.docxContent table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1em;
+}
+
+.docxContent table td,
+.docxContent table th {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.docxContent img {
+  max-width: 100%;
+  height: auto;
+}
