@@ -1,0 +1,75 @@
+.mentionInputContainer {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+
+.mentionInput {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.mentionInput:focus {
+  outline: none;
+  border-color: #1264a3;
+  box-shadow: 0 0 0 1px #1264a3;
+}
+
+.suggestionsDropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.suggestionItem {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  border-bottom: 1px solid #f0f0f0;
+  color: #1d1c1d;
+}
+
+.suggestionItem:last-child {
+  border-bottom: none;
+}
+
+.suggestionItem:hover,
+.suggestionItem.selected {
+  background-color: #1264a3;
+  color: white;
+}
+
+.suggestionMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.suggestionName {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.suggestionDescription {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+.suggestionItem:hover .suggestionDescription,
+.suggestionItem.selected .suggestionDescription {
+  opacity: 0.9;
+}

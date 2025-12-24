@@ -1,0 +1,13 @@
+.mention {
+  background-color: #1264a3;
+  color: white;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.mention:hover {
+  background-color: #0b4c8c;
+}

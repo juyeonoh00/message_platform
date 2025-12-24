@@ -242,6 +242,11 @@ class WebSocketService {
       return // Already subscribed
     }
 
+    if (!this.client) {
+      console.error('WebSocket client is not initialized')
+      return
+    }
+
     try {
       const subscription = this.client.subscribe(destination, (message) => {
         console.log(`📨 Received on ${destination}:`, message.body)
@@ -294,6 +299,11 @@ class WebSocketService {
 
     if (this.subscriptions.has(destination)) {
       return // Already subscribed
+    }
+
+    if (!this.client) {
+      console.error('WebSocket client is not initialized')
+      return
     }
 
     try {
@@ -350,6 +360,11 @@ class WebSocketService {
       return
     }
 
+    if (!this.client) {
+      console.error('WebSocket client is not initialized')
+      return
+    }
+
     try {
       const subscription = this.client.subscribe(destination, (message) => {
         const indicator: TypingIndicator = JSON.parse(message.body)
@@ -372,6 +387,11 @@ class WebSocketService {
     const destination = `/topic/chatroom/${chatroomId}/typing`
 
     if (this.subscriptions.has(destination)) {
+      return
+    }
+
+    if (!this.client) {
+      console.error('WebSocket client is not initialized')
       return
     }
 
@@ -413,6 +433,11 @@ class WebSocketService {
       return
     }
 
+    if (!this.client) {
+      console.error('WebSocket client is not initialized')
+      return
+    }
+
     try {
       const subscription = this.client.subscribe(destination, (message) => {
         const wsMessage: WebSocketMessage = JSON.parse(message.body)
@@ -446,6 +471,11 @@ class WebSocketService {
       return
     }
 
+    if (!this.client) {
+      console.error('WebSocket client is not initialized')
+      return
+    }
+
     try {
       console.log('📤 Sending message to /app/chat.sendMessage:', data)
       this.client.publish({
@@ -464,6 +494,11 @@ class WebSocketService {
       return
     }
 
+    if (!this.client) {
+      console.error('WebSocket client is not initialized')
+      return
+    }
+
     try {
       this.client.publish({
         destination: '/app/chat.typing',
@@ -477,6 +512,11 @@ class WebSocketService {
   sendChatroomTypingIndicator(chatroomId: number, isTyping: boolean) {
     if (!this.getConnectionStatus()) {
       console.warn('⚠️ WebSocket not connected. Skipping chatroom typing indicator.')
+      return
+    }
+
+    if (!this.client) {
+      console.error('WebSocket client is not initialized')
       return
     }
 
@@ -506,6 +546,11 @@ class WebSocketService {
         localStorage.removeItem('user')
         window.location.href = '/login'
       }
+      return
+    }
+
+    if (!this.client) {
+      console.error('WebSocket client is not initialized')
       return
     }
 

@@ -53,6 +53,7 @@ public class ChannelMembershipService {
         ChannelMember member = ChannelMember.builder()
                 .channel(channel)
                 .user(user)
+                .role("MEMBER")
                 .build();
 
         try {

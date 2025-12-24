@@ -257,7 +257,7 @@ export default function DocumentsPage() {
                     <div className={styles.categoryActions}>
                       <input
                         type="file"
-                        ref={(el) => (fileInputRefs.current[category.id] = el)}
+                        ref={(el) => { fileInputRefs.current[category.id] = el; }}
                         style={{ display: 'none' }}
                         onChange={(e) => handleFileChange(e, category.id)}
                       />

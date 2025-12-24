@@ -49,10 +49,11 @@ public class ChannelService {
 
         channel = channelRepository.save(channel);
 
-        // Add creator as member
+        // Add creator as member with ADMIN role
         ChannelMember member = ChannelMember.builder()
                 .channel(channel)
                 .user(user)
+                .role("ADMIN")
                 .build();
 
         channelMemberRepository.save(member);
@@ -131,6 +132,7 @@ public class ChannelService {
         ChannelMember member = ChannelMember.builder()
                 .channel(channel)
                 .user(user)
+                .role("MEMBER")
                 .build();
 
         channelMemberRepository.save(member);
@@ -170,6 +172,7 @@ public class ChannelService {
         ChannelMember member = ChannelMember.builder()
                 .channel(channel)
                 .user(targetUser)
+                .role("MEMBER")
                 .build();
 
         channelMemberRepository.save(member);

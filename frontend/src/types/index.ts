@@ -107,3 +107,20 @@ export interface SearchRequest {
   startTime?: string
   endTime?: string
 }
+
+export interface Notification {
+  id: number
+  userId: number
+  workspaceId: number
+  type: string
+  content: string
+  channelId?: number
+  chatroomId?: number
+  messageId?: number
+  senderId: number
+  senderName: string
+  senderAvatarUrl?: string
+  isRead: boolean
+  createdAt: string
+  readAt?: string
+}

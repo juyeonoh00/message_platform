@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAppDispatch } from '@/store/hooks'
 import { setCredentials } from '@/store/slices/authSlice'
@@ -18,6 +18,30 @@ export default function LoginPage() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
+
+  // Electron 환경에서 저장된 credential 불러오기
+  useEffect(() => {
+    const loadSavedCredentials = async () => {
+      if (typeof window !== 'undefined' && window.electron?.credentials) {
+        try {
+          const result = await window.electron.credentials.load()
+          if (result.success && result.credentials) {
+            setFormData((prev) => ({
+              ...prev,
+              email: result.credentials!.email,
+              password: result.credentials!.password,
+            }))
+            setRememberMe(true)
+          }
+        } catch (err) {
+          console.error('Failed to load saved credentials:', err)
+        }
+      }
+    }
+
+    loadSavedCredentials()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,6 +62,22 @@ export default function LoginPage() {
           refreshToken,
         })
       )
+
+      // Electron 환경에서 credential 저장 또는 삭제
+      if (typeof window !== 'undefined' && window.electron?.credentials && isLogin) {
+        try {
+          if (rememberMe) {
+            await window.electron.credentials.save({
+              email: formData.email,
+              password: formData.password,
+            })
+          } else {
+            await window.electron.credentials.delete()
+          }
+        } catch (err) {
+          console.error('Failed to save/delete credentials:', err)
+        }
+      }
 
       router.push('/workspaces')
     } catch (err: any) {
@@ -84,6 +124,19 @@ export default function LoginPage() {
               required
             />
           </div>
+
+          {isLogin && typeof window !== 'undefined' && window.electron?.credentials && (
+            <div className={styles.checkboxGroup}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                />
+                <span>아이디 기억하기</span>
+              </label>
+            </div>
+          )}
 
           {error && <div className={styles.error}>{error}</div>}
 

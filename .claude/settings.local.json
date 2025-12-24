@@ -5,7 +5,15 @@
       "Bash(./gradlew build:*)",
       "Bash(cat:*)",
       "Bash(find:*)",
-      "Bash(mysql:*)"
+      "Bash(mysql:*)",
+      "Bash(npm run build:*)",
+      "Bash(./gradlew bootRun)",
+      "Bash(timeout /t 10)",
+      "Bash(gradlew.bat bootRun)",
+      "Bash(ping:*)",
+      "Bash(nul)",
+      "Bash(cmd /c \"cd backend && gradlew.bat bootRun 2>&1\")",
+      "Bash(cmd /c \"gradlew.bat build --stacktrace 2>&1 | findstr /I /C:\"\"error\"\" /C:\"\"exception\"\" /C:\"\"failed\"\" /C:\"\"ERROR\"\" || echo No errors found in build output\")"
     ],
     "deny": [],
     "ask": []

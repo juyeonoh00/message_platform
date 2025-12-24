@@ -38,7 +38,8 @@ public class Message {
     @Column(nullable = false)
     private Long userId;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Lob
+    @Column(nullable = false)
     private String content;
 
     @Column(name = "parent_message_id")

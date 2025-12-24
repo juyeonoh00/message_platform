@@ -77,6 +77,8 @@ public class MessageService {
 
         // Handle mentions
         List<MessageResponse.MentionInfo> mentionInfos = new ArrayList<>();
+
+        // First, handle user mentions
         if (request.getMentionedUserIds() != null && !request.getMentionedUserIds().isEmpty()) {
             for (int i = 0; i < request.getMentionedUserIds().size(); i++) {
                 Long mentionedUserId = request.getMentionedUserIds().get(i);
@@ -96,6 +98,41 @@ public class MessageService {
                         .userId(mentionedUserId)
                         .mentionType(mentionType)
                         .build());
+
+                // Create notification for mention
+                String notificationContent = user.getName() + "님이 메시지에서 멘션했습니다: " +
+                        (request.getContent().length() > 50 ? request.getContent().substring(0, 50) + "..." : request.getContent());
+            }
+        }
+
+        // Handle @everyone (channel) mentions
+        if (request.getMentionTypes() != null && request.getMentionTypes().contains("channel")) {
+            // Get all channel members
+            List<ChannelMember> channelMembers = channelMemberRepository.findByChannelId(request.getChannelId());
+
+            for (ChannelMember member : channelMembers) {
+                // Skip the message sender
+                if (member.getUser().getId().equals(userId)) {
+                    continue;
+                }
+
+                Mention mention = Mention.builder()
+                        .message(message)
+                        .mentionedUserId(member.getUser().getId())
+                        .mentionType("channel")
+                        .isRead(false)
+                        .build();
+
+                mentionRepository.save(mention);
+
+                mentionInfos.add(MessageResponse.MentionInfo.builder()
+                        .userId(member.getUser().getId())
+                        .mentionType("channel")
+                        .build());
+
+                // Create notification for channel mention
+                String notificationContent = user.getName() + "님이 @everyone으로 멘션했습니다: " +
+                        (request.getContent().length() > 50 ? request.getContent().substring(0, 50) + "..." : request.getContent());
             }
         }
 

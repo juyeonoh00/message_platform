@@ -32,7 +32,8 @@ public class ChatroomMessage {
     @Column(nullable = false)
     private Long userId;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Lob
+    @Column(nullable = false)
     private String content;
 
     @Column(nullable = false)

@@ -56,6 +56,8 @@ public class ChatroomMessageService {
 
         // Handle mentions
         List<ChatroomMessageResponse.MentionInfo> mentionInfos = new ArrayList<>();
+
+        // First, handle user mentions
         if (request.getMentionedUserIds() != null && !request.getMentionedUserIds().isEmpty()) {
             for (int i = 0; i < request.getMentionedUserIds().size(); i++) {
                 Long mentionedUserId = request.getMentionedUserIds().get(i);
@@ -75,6 +77,41 @@ public class ChatroomMessageService {
                         .userId(mentionedUserId)
                         .mentionType(mentionType)
                         .build());
+
+                // Create notification for mention in chatroom
+                String notificationContent = user.getName() + "님이 DM에서 멘션했습니다: " +
+                        (request.getContent().length() > 50 ? request.getContent().substring(0, 50) + "..." : request.getContent());
+            }
+        }
+
+        // Handle @everyone (channel) mentions
+        if (request.getMentionTypes() != null && request.getMentionTypes().contains("channel")) {
+            // Get all chatroom members
+            List<ChatroomMember> chatroomMembers = chatroomMemberRepository.findByChatroomId(request.getChatroomId());
+
+            for (ChatroomMember member : chatroomMembers) {
+                // Skip the message sender
+                if (member.getUser().getId().equals(userId)) {
+                    continue;
+                }
+
+                ChatroomMention mention = ChatroomMention.builder()
+                        .chatroomMessage(message)
+                        .mentionedUserId(member.getUser().getId())
+                        .mentionType("channel")
+                        .isRead(false)
+                        .build();
+
+                chatroomMentionRepository.save(mention);
+
+                mentionInfos.add(ChatroomMessageResponse.MentionInfo.builder()
+                        .userId(member.getUser().getId())
+                        .mentionType("channel")
+                        .build());
+
+                // Create notification for channel mention in chatroom
+                String notificationContent = user.getName() + "님이 DM에서 @everyone으로 멘션했습니다: " +
+                        (request.getContent().length() > 50 ? request.getContent().substring(0, 50) + "..." : request.getContent());
             }
         }
 

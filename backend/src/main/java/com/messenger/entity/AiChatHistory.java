@@ -29,7 +29,8 @@ public class AiChatHistory {
     @Column(nullable = false, length = 10)
     private String role; // "user" or "ai"
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Lob
+    @Column(nullable = false)
     private String content;
 
     @CreatedDate

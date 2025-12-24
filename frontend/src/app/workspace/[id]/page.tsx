@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import { useAppSelector, useAppDispatch } from '@/store/hooks'
 import { setChannels, setCurrentChannel, removeChannel, resetUnreadCount, incrementUnreadCount } from '@/store/slices/channelSlice'
 import { setMessages, addMessage, updateMessage, deleteMessage, addTypingUser, toggleMessageReaction } from '@/store/slices/messageSlice'
-import { channelAPI, messageAPI, workspaceAPI, aiAPI, chatroomAPI, chatroomMessageAPI, searchAPI, userAPI } from '@/services/api'
+import { channelAPI, messageAPI, workspaceAPI, aiAPI, chatroomAPI, chatroomMessageAPI, searchAPI, userAPI, notificationAPI } from '@/services/api'
 import { wsService } from '@/services/websocket'
-import { Channel, Message as MessageType, WorkspaceMember, MessageDocument } from '@/types'
+import { Channel, Message as MessageType, WorkspaceMember, MessageDocument, Notification } from '@/types'
 import MessageContent from '@/components/MessageContent'
+import MentionInput from '@/components/MentionInput'
 import styles from './workspace.module.css'
 
 export default function WorkspacePage({
@@ -23,6 +24,8 @@ export default function WorkspacePage({
   const { channelMessages, chatroomMessages, typingUsers } = useAppSelector((state) => state.message)
   const { user, accessToken, isInitialized } = useAppSelector((state) => state.auth)
   const [messageInput, setMessageInput] = useState('')
+  const [messageMentions, setMessageMentions] = useState<Array<{userId?: number, mentionType: string, displayText: string}>>([])
+  const [threadMentions, setThreadMentions] = useState<Array<{userId?: number, mentionType: string, displayText: string}>>([])
   const [isTyping, setIsTyping] = useState(false)
   const [wsConnected, setWsConnected] = useState(false)
   const messageListRef = useRef<HTMLDivElement>(null)
@@ -93,6 +96,12 @@ export default function WorkspacePage({
   // Chatroom state (DMs are now separate from channels)
   const [chatrooms, setChatrooms] = useState<any[]>([])
   const [currentChatroom, setCurrentChatroom] = useState<any>(null)
+
+  // Notification state
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false)
+  const notificationButtonRef = useRef<HTMLButtonElement>(null)
 
   // Channel header more menu state
   const [showChannelHeaderMenu, setShowChannelHeaderMenu] = useState(false)
@@ -175,13 +184,104 @@ export default function WorkspacePage({
     setCurrentChatroom(null)
 
     loadChannels()
+    loadNotifications()
     connectWebSocket()
+
+    // Electron 알림 클릭 시 네비게이션 처리
+    if (typeof window !== 'undefined' && window.electron) {
+      window.electron.onNavigateToMention((data) => {
+        console.log('Navigate to mention:', data)
+
+        if (data.channelId) {
+          // 채널로 이동
+          const channel = channels.find(c => c.id === data.channelId)
+          if (channel) {
+            dispatch(setCurrentChannel(channel))
+            setCurrentChatroom(null)
+          }
+        } else if (data.chatroomId) {
+          // 채팅방으로 이동
+          router.push(`/workspace/${workspaceId}/chatroom/${data.chatroomId}`)
+        }
+      })
+    }
 
     return () => {
       wsService.disconnect()
       setWsConnected(false)
     }
   }, [user, accessToken, isInitialized, workspaceId])
+
+  const loadNotifications = async () => {
+    try {
+      const [notificationsResponse, countResponse] = await Promise.all([
+        notificationAPI.getNotifications(workspaceId),
+        notificationAPI.getUnreadCount(workspaceId),
+      ])
+
+      setNotifications(notificationsResponse.data)
+      setUnreadNotificationsCount(countResponse.data)
+    } catch (error) {
+      console.error('Failed to load notifications:', error)
+    }
+  }
+
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read
+    try {
+      await notificationAPI.markAsRead(notification.id)
+      setNotifications(prev =>
+        prev.map(n => (n.id === notification.id ? { ...n, isRead: true } : n))
+      )
+      setUnreadNotificationsCount(prev => Math.max(0, prev - 1))
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error)
+    }
+
+    // Navigate to the message
+    if (notification.channelId) {
+      const channel = channels.find(c => c.id === notification.channelId)
+      if (channel) {
+        dispatch(setCurrentChannel(channel))
+        setCurrentChatroom(null)
+      }
+    } else if (notification.chatroomId) {
+      const chatroom = chatrooms.find(c => c.id === notification.chatroomId)
+      if (chatroom) {
+        setCurrentChatroom(chatroom)
+        dispatch(setCurrentChannel(null))
+      }
+    }
+
+    setShowNotificationsDropdown(false)
+  }
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationAPI.markAllAsRead(workspaceId)
+      setNotifications(prev =>
+        prev.map(n => ({ ...n, isRead: true }))
+      )
+      setUnreadNotificationsCount(0)
+    } catch (error) {
+      console.error('Failed to mark all as read:', error)
+    }
+  }
+
+  const formatNotificationTime = (createdAt: string) => {
+    const date = new Date(createdAt)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const seconds = Math.floor(diff / 1000)
+    const minutes = Math.floor(seconds / 60)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+
+    if (days > 0) return `${days}일 전`
+    if (hours > 0) return `${hours}시간 전`
+    if (minutes > 0) return `${minutes}분 전`
+    return '방금'
+  }
 
   useEffect(() => {
     if (currentChannel) {
@@ -213,6 +313,11 @@ export default function WorkspacePage({
 
   // Update read state when messages change in current channel
   useEffect(() => {
+    // Only call API if user is authenticated and auth state is initialized
+    if (!isInitialized || !accessToken || !user) {
+      return
+    }
+
     if (currentChannel) {
       const currentChannelMessages = channelMessages[currentChannel.id] || []
       if (currentChannelMessages.length > 0) {
@@ -230,7 +335,7 @@ export default function WorkspacePage({
         })
       }
     }
-  }, [currentChannel, channelMessages])
+  }, [currentChannel, channelMessages, isInitialized, accessToken, user])
 
   const connectWebSocket = async () => {
     if (!accessToken) {
@@ -315,6 +420,36 @@ export default function WorkspacePage({
           handleCloseThread()
         }
       })
+
+      // 멘션 알림 핸들러
+      if (user) {
+        wsService.subscribeToMentions(user.id)
+        wsService.onMention((data) => {
+          console.log('📨 Received mention notification:', data)
+          // 읽지 않은 멘션 수 증가
+          setUnreadMentions((prev) => prev + 1)
+
+          // Electron 데스크톱 알림 표시
+          if (typeof window !== 'undefined' && window.electron) {
+            console.log('🔔 Electron is available, showing notification...')
+            const message = data.payload?.message
+            const sender = message?.sender
+
+            const notificationData = {
+              title: `${sender?.username || '누군가'}님이 멘션했습니다`,
+              body: message?.content || '새로운 멘션이 있습니다',
+              workspaceId: workspaceId,
+              channelId: message?.channelId,
+              chatroomId: message?.chatroomId,
+            }
+
+            console.log('📤 Sending notification to Electron:', notificationData)
+            window.electron.notification.show(notificationData)
+          } else {
+            console.log('⚠️ Electron is not available, notification not shown')
+          }
+        })
+      }
     } catch (error) {
       console.error('WebSocket connection failed:', error)
       setWsConnected(false)
@@ -324,20 +459,22 @@ export default function WorkspacePage({
 
   const loadChannels = async () => {
     try {
-      const [channelsResponse, chatroomsResponse] = await Promise.all([
+      const [channelsResponse, chatroomsResponse, membersResponse] = await Promise.all([
         channelAPI.getByWorkspace(workspaceId),
         chatroomAPI.getByWorkspace(workspaceId),
+        workspaceAPI.getMembers(workspaceId),
       ])
 
       dispatch(setChannels(channelsResponse.data))
       setChatrooms(chatroomsResponse.data)
+      setWorkspaceMembers(membersResponse.data)
 
       // Always select the first channel when loading channels for this workspace
       if (channelsResponse.data.length > 0) {
         dispatch(setCurrentChannel(channelsResponse.data[0]))
       }
     } catch (error) {
-      console.error('Failed to load channels and chatrooms', error)
+      console.error('Failed to load channels, chatrooms, and members', error)
     }
   }
 
@@ -372,18 +509,28 @@ export default function WorkspacePage({
   const handleSendMessage = () => {
     if (!messageInput.trim()) return
 
+    // Extract mention data
+    const mentionedUserIds = messageMentions
+      .filter(m => m.userId !== undefined)
+      .map(m => m.userId!)
+    const mentionTypes = messageMentions.map(m => m.mentionType)
+
     // Send to chatroom if chatroom is selected
     if (currentChatroom) {
       console.log('Sending chatroom message:', {
         workspaceId,
         chatroomId: currentChatroom.id,
         content: messageInput,
+        mentionedUserIds,
+        mentionTypes,
       })
 
       wsService.sendChatroomMessage({
         workspaceId,
         chatroomId: currentChatroom.id,
         content: messageInput,
+        mentionedUserIds: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
+        mentionTypes: mentionTypes.length > 0 ? mentionTypes : undefined,
       })
     }
     // Send to channel if channel is selected
@@ -392,16 +539,21 @@ export default function WorkspacePage({
         workspaceId,
         channelId: currentChannel.id,
         content: messageInput,
+        mentionedUserIds,
+        mentionTypes,
       })
 
       wsService.sendMessage({
         workspaceId,
         channelId: currentChannel.id,
         content: messageInput,
+        mentionedUserIds: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
+        mentionTypes: mentionTypes.length > 0 ? mentionTypes : undefined,
       })
     }
 
     setMessageInput('')
+    setMessageMentions([])
     setIsTyping(false)
   }
 
@@ -631,21 +783,31 @@ export default function WorkspacePage({
       return
     }
 
+    // Extract thread mention data
+    const mentionedUserIds = threadMentions
+      .filter(m => m.userId !== undefined)
+      .map(m => m.userId!)
+    const mentionTypes = threadMentions.map(m => m.mentionType)
+
     console.log('=== SENDING THREAD REPLY ===')
     console.log('Parent Message ID:', selectedThreadMessage.id)
     console.log('Parent Message Content:', selectedThreadMessage.content)
     console.log('Reply Content:', threadReplyInput)
     console.log('Channel ID:', currentChannel.id)
     console.log('Workspace ID:', workspaceId)
+    console.log('Mentions:', { mentionedUserIds, mentionTypes })
 
     wsService.sendMessage({
       workspaceId,
       channelId: currentChannel.id,
       content: threadReplyInput,
       parentMessageId: selectedThreadMessage.id,
+      mentionedUserIds: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
+      mentionTypes: mentionTypes.length > 0 ? mentionTypes : undefined,
     })
 
     setThreadReplyInput('')
+    setThreadMentions([])
   }
 
   const handleCloseThread = () => {
@@ -1198,14 +1360,84 @@ export default function WorkspacePage({
               </div>
             </div>
           </div>
-          <button
-            className={styles.settingsButton}
-            onClick={() => router.push('/profile')}
-            title="프로필 설정"
-          >
-            ⚙️
-          </button>
+          <div className={styles.profileActions}>
+            <button
+              className={styles.settingsButton}
+              onClick={() => router.push('/profile')}
+              title="프로필 설정"
+            >
+              ⚙️
+            </button>
+          </div>
         </div>
+
+        {/* Notifications Dropdown */}
+        {showNotificationsDropdown && (
+          <>
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 999,
+              }}
+              onClick={() => setShowNotificationsDropdown(false)}
+            />
+            <div className={styles.notificationsDropdown}>
+              <div className={styles.notificationsHeader}>
+                <h3>알림</h3>
+                {unreadNotificationsCount > 0 && (
+                  <button
+                    className={styles.markAllReadButton}
+                    onClick={handleMarkAllAsRead}
+                  >
+                    모두 읽음
+                  </button>
+                )}
+              </div>
+              <div className={styles.notificationsList}>
+                {notifications.length === 0 ? (
+                  <div className={styles.noNotifications}>
+                    알림이 없습니다
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`${styles.notificationItem} ${
+                        !notification.isRead ? styles.unread : ''
+                      }`}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <div className={styles.notificationAvatar}>
+                        {notification.senderAvatarUrl ? (
+                          <img src={notification.senderAvatarUrl} alt={notification.senderName} />
+                        ) : (
+                          <div className={styles.notificationAvatarPlaceholder}>
+                            {notification.senderName?.charAt(0).toUpperCase() || '?'}
+                          </div>
+                        )}
+                      </div>
+                      <div className={styles.notificationContent}>
+                        <div className={styles.notificationText}>
+                          {notification.content}
+                        </div>
+                        <div className={styles.notificationTime}>
+                          {formatNotificationTime(notification.createdAt)}
+                        </div>
+                      </div>
+                      {!notification.isRead && (
+                        <div className={styles.notificationUnreadDot} />
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Channel Create Modal */}
@@ -1384,7 +1616,7 @@ export default function WorkspacePage({
               <h2>
                 {currentChatroom
                   ? `● ${currentChatroom.name}`
-                  : `# ${currentChannel.name}`}
+                  : `# ${currentChannel?.name || ''}`}
               </h2>
               {currentChannel && (
                 <div className={styles.headerButtons}>
@@ -1472,8 +1704,16 @@ export default function WorkspacePage({
                       </>
                     )}
                   </div>
-                  <button className={styles.headerIconButton} title="알림 편집">
+                  <button
+                    className={styles.headerIconButton}
+                    onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
+                    title="알림"
+                    style={{ position: 'relative' }}
+                  >
                     🔔
+                    {unreadNotificationsCount > 0 && (
+                      <span className={styles.notificationBadge}>{unreadNotificationsCount}</span>
+                    )}
                   </button>
                   <button
                     className={styles.headerIconButton}
@@ -1599,7 +1839,7 @@ export default function WorkspacePage({
                     </div>
                   ) : (
                     <div className={styles.messageContent}>
-                      <MessageContent content={msg.content} workspaceId={workspaceId} />
+                      <MessageContent content={msg.content} workspaceId={workspaceId} currentUserId={user?.id} mentions={msg.mentions} />
                     </div>
                   )}
 
@@ -1656,8 +1896,14 @@ export default function WorkspacePage({
             </div>
 
             <div className={styles.inputArea}>
-              <input
-                type="text"
+              <MentionInput
+                value={messageInput}
+                onChange={(value, mentions) => {
+                  setMessageInput(value)
+                  setMessageMentions(mentions)
+                  handleTyping()
+                }}
+                onSubmit={handleSendMessage}
                 placeholder={
                   currentChatroom
                     ? `Message ${currentChatroom.name}`
@@ -1665,16 +1911,7 @@ export default function WorkspacePage({
                     ? `Message #${currentChannel.name}`
                     : 'Select a channel or chatroom'
                 }
-                value={messageInput}
-                onChange={(e) => {
-                  setMessageInput(e.target.value)
-                  handleTyping()
-                }}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSendMessage()
-                  }
-                }}
+                workspaceMembers={workspaceMembers}
               />
               <button onClick={handleSendMessage}>전송</button>
             </div>
@@ -1761,7 +1998,7 @@ export default function WorkspacePage({
                     </span>
                   </div>
                   <div className={styles.messageContent}>
-                    <MessageContent content={selectedThreadMessage.content} workspaceId={workspaceId} />
+                    <MessageContent content={selectedThreadMessage.content} workspaceId={workspaceId} currentUserId={user?.id} mentions={selectedThreadMessage.mentions} />
                   </div>
                 </div>
               </div>
@@ -1850,7 +2087,7 @@ export default function WorkspacePage({
                     </div>
                   ) : (
                     <div className={styles.messageContent}>
-                      <MessageContent content={reply.content} workspaceId={workspaceId} />
+                      <MessageContent content={reply.content} workspaceId={workspaceId} currentUserId={user?.id} mentions={reply.mentions} />
                     </div>
                   )}
 
@@ -1892,16 +2129,15 @@ export default function WorkspacePage({
 
           {/* Thread Reply Input */}
           <div className={styles.threadInput}>
-            <input
-              type="text"
-              placeholder="답글 입력..."
+            <MentionInput
               value={threadReplyInput}
-              onChange={(e) => setThreadReplyInput(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleSendThreadReply()
-                }
+              onChange={(value, mentions) => {
+                setThreadReplyInput(value)
+                setThreadMentions(mentions)
               }}
+              onSubmit={handleSendThreadReply}
+              placeholder="답글 입력..."
+              workspaceMembers={workspaceMembers}
             />
             <button onClick={handleSendThreadReply}>전송</button>
           </div>

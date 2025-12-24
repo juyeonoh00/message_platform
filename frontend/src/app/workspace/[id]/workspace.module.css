@@ -527,6 +527,11 @@
   border-top: 1px solid #ddd;
   display: flex;
   gap: 10px;
+  align-items: stretch;
+}
+
+.inputArea > :first-child {
+  flex: 1;
 }
 
 .inputArea input {
@@ -550,6 +555,7 @@
   border-radius: 5px;
   cursor: pointer;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .inputArea button:hover {
@@ -796,6 +802,11 @@
   border-top: 1px solid #ddd;
   display: flex;
   gap: 10px;
+  align-items: stretch;
+}
+
+.threadInput > :first-child {
+  flex: 1;
 }
 
 .threadInput input {
@@ -819,6 +830,7 @@
   border-radius: 5px;
   cursor: pointer;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .threadInput button:hover {
@@ -1053,6 +1065,47 @@
 
 .settingsButton:hover {
   background-color: rgba(255, 255, 255, 0.1);
+}
+
+.profileActions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.mentionButton {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+.mentionButton:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+.mentionBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: #e01e5a;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
 }
 
 /* Edit Message Styles */
@@ -2020,4 +2073,178 @@
   border: none;
   font-weight: 500;
   line-height: 1.5;
+}
+
+/* Notification styles */
+.notificationButton {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.notificationButton:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.notificationBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: #e01e5a;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+  line-height: 1.2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.notificationsDropdown {
+  position: fixed;
+  top: 60px;
+  right: 80px;
+  width: 380px;
+  max-height: 500px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.notificationsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e8e8e8;
+  background-color: #fff;
+}
+
+.notificationsHeader h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: #1d1c1d;
+}
+
+.markAllReadButton {
+  padding: 6px 12px;
+  background-color: transparent;
+  color: #007a5a;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.markAllReadButton:hover {
+  background-color: #f0f7f4;
+}
+
+.notificationsList {
+  overflow-y: auto;
+  max-height: 440px;
+}
+
+.noNotifications {
+  padding: 40px 20px;
+  text-align: center;
+  color: #868686;
+  font-size: 14px;
+}
+
+.notificationItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 1px solid #f5f5f5;
+  position: relative;
+}
+
+.notificationItem:hover {
+  background-color: #f8f8f8;
+}
+
+.notificationItem.unread {
+  background-color: #f0f7ff;
+}
+
+.notificationItem.unread:hover {
+  background-color: #e6f2ff;
+}
+
+.notificationAvatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.notificationAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.notificationAvatarPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.notificationContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.notificationText {
+  font-size: 14px;
+  color: #1d1c1d;
+  line-height: 1.5;
+  margin-bottom: 4px;
+  word-wrap: break-word;
+}
+
+.notificationTime {
+  font-size: 12px;
+  color: #868686;
+}
+
+.notificationUnreadDot {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  background-color: #007a5a;
+  border-radius: 50%;
 }

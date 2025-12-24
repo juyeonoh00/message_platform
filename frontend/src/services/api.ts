@@ -356,4 +356,18 @@ export const documentAPI = {
     api.get(`/documents/${documentId}`),
 }
 
+// Notification APIs
+export const notificationAPI = {
+  getNotifications: (workspaceId: number) =>
+    api.get(`/notifications/workspace/${workspaceId}`),
+  getUnreadNotifications: (workspaceId: number) =>
+    api.get(`/notifications/workspace/${workspaceId}/unread`),
+  getUnreadCount: (workspaceId: number) =>
+    api.get(`/notifications/workspace/${workspaceId}/unread/count`),
+  markAsRead: (notificationId: number) =>
+    api.put(`/notifications/${notificationId}/read`),
+  markAllAsRead: (workspaceId: number) =>
+    api.put(`/notifications/workspace/${workspaceId}/read-all`),
+}
+
 export default api
