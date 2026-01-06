@@ -42,6 +42,9 @@ public class ChatroomMessage {
     @Column(nullable = false)
     private Boolean isDeleted = false;
 
+    @Column(name = "chunk_id")
+    private String chunkId; // RAG API에서 반환된 Elasticsearch chunk ID
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

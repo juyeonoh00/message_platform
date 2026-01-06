@@ -34,16 +34,14 @@ public class DocumentService {
      */
     @Transactional(readOnly = true)
     public List<DocumentCategoryResponse> getCategoriesWithDocuments(Long workspaceId) {
-        List<DocumentCategory> categories = categoryRepository.findByWorkspaceId(workspaceId);
+        List<DocumentCategory> categories = categoryRepository.findByWorkspace_Id(workspaceId);
 
         return categories.stream()
                 .map(category -> {
-                    List<Document> documents = documentRepository.findByCategoryId(category.getId());
+                    List<Document> documents = documentRepository.findByCategory_Id(category.getId());
                     List<DocumentResponse> documentResponses = documents.stream()
                             .map(doc -> {
-                                User uploader = userRepository.findById(doc.getUploaderId())
-                                        .orElse(null);
-                                String uploaderName = uploader != null ? uploader.getName() : "Unknown";
+                                String uploaderName = doc.getUploader() != null ? doc.getUploader().getName() : "Unknown";
                                 return DocumentResponse.from(doc, uploaderName);
                             })
                             .collect(Collectors.toList());
@@ -60,7 +58,7 @@ public class DocumentService {
     public DocumentCategoryResponse createCategory(CreateCategoryRequest request) {
         DocumentCategory category = DocumentCategory.builder()
                 .name(request.getName())
-                .workspaceId(request.getWorkspaceId())
+                .workspace(com.messenger.entity.Workspace.builder().id(request.getWorkspaceId()).build())
                 .build();
 
         category = categoryRepository.save(category);
@@ -74,7 +72,7 @@ public class DocumentService {
     @Transactional
     public void deleteCategory(Long categoryId) {
         // 카테고리의 모든 문서 삭제
-        List<Document> documents = documentRepository.findByCategoryId(categoryId);
+        List<Document> documents = documentRepository.findByCategory_Id(categoryId);
         for (Document document : documents) {
             fileStorageService.deleteDocument(document.getFileUrl());
             documentRepository.delete(document);
@@ -103,9 +101,9 @@ public class DocumentService {
                 .fileUrl(fileUrl)
                 .fileSize(file.getSize())
                 .contentType(file.getContentType())
-                .categoryId(categoryId)
-                .workspaceId(workspaceId)
-                .uploaderId(uploaderId)
+                .category(DocumentCategory.builder().id(categoryId).build())
+                .workspace(com.messenger.entity.Workspace.builder().id(workspaceId).build())
+                .uploader(User.builder().id(uploaderId).build())
                 .build();
 
         document = documentRepository.save(document);
@@ -127,8 +125,7 @@ public class DocumentService {
         }
 
         // 업로더 정보 조회
-        User uploader = userRepository.findById(uploaderId).orElse(null);
-        String uploaderName = uploader != null ? uploader.getName() : "Unknown";
+        String uploaderName = document.getUploader() != null ? document.getUploader().getName() : "Unknown";
 
         return DocumentResponse.from(document, uploaderName);
     }
@@ -156,8 +153,7 @@ public class DocumentService {
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new RuntimeException("문서를 찾을 수 없습니다"));
 
-        User uploader = userRepository.findById(document.getUploaderId()).orElse(null);
-        String uploaderName = uploader != null ? uploader.getName() : "Unknown";
+        String uploaderName = document.getUploader() != null ? document.getUploader().getName() : "Unknown";
 
         return DocumentResponse.from(document, uploaderName);
     }

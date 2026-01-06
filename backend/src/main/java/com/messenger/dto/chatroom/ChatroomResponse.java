@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 public class ChatroomResponse {
 
     private Long id;
-    private Long workspaceId;
     private String name; // Participant usernames
     private String avatarUrl; // Other user's avatar URL
     private Long targetUserId; // Other user's ID (for opening profile)

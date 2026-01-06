@@ -70,4 +70,13 @@ public class WorkspaceController {
         workspaceService.removeMember(userId, workspaceId, memberUserId);
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/{workspaceId}")
+    public ResponseEntity<Void> deleteWorkspace(
+            Authentication authentication,
+            @PathVariable Long workspaceId) {
+        Long userId = (Long) authentication.getPrincipal();
+        workspaceService.deleteWorkspace(userId, workspaceId);
+        return ResponseEntity.ok().build();
+    }
 }

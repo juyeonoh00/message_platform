@@ -27,12 +27,11 @@ public class ChatroomController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/workspace/{workspaceId}")
+    @GetMapping
     public ResponseEntity<List<ChatroomResponse>> getChatroomsByUser(
-            Authentication authentication,
-            @PathVariable Long workspaceId) {
+            Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
-        List<ChatroomResponse> chatrooms = chatroomService.getChatroomsByUser(userId, workspaceId);
+        List<ChatroomResponse> chatrooms = chatroomService.getChatroomsByUser(userId);
         return ResponseEntity.ok(chatrooms);
     }
 

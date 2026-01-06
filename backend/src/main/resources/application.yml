@@ -44,7 +44,7 @@ jwt:
 
 # Elasticsearch Configuration
 elasticsearch:
-  host: ${ES_HOST:192.168.123.38}
+  host: ${ES_HOST:221.143.23.118}
   port: ${ES_PORT:9200}
 
 # CORS Configuration
@@ -59,11 +59,23 @@ rag:
 
 # MinIO Configuration
 minio:
-  endpoint: ${MINIO_ENDPOINT:http://192.168.123.38:9000}
+  endpoint: ${MINIO_ENDPOINT:http://221.143.23.118:9000}
   access-key: ${MINIO_ACCESS_KEY:root}
   secret-key: ${MINIO_SECRET_KEY:#wisecan}
   bucket-name: ${MINIO_BUCKET_NAME:messenger-avatars}
   documents-bucket-name: ${MINIO_DOCUMENTS_BUCKET_NAME:messenger-documents}
+
+# Firebase Cloud Messaging Configuration
+# TODO: Firebase 설정 완료 후 enabled를 true로 변경하세요
+fcm:
+  credentials-path: ${FCM_CREDENTIALS_PATH:classpath:firebase-service-account.json}
+  enabled: ${FCM_ENABLED:false}  # Firebase 설정 전까지 비활성화
+
+# Kakao OAuth Configuration
+kakao:
+  rest-api-key: ${KAKAO_REST_API_KEY:6b3c3458145b128f5dcf7cbb39e0ad28}
+  client-secret: ${KAKAO_CLIENT_SECRET:6egsjOyyWnxwgS99FVXTY2gg344rA6zc}
+  redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:3000/login/kakao/callback}
 
 logging:
   level:

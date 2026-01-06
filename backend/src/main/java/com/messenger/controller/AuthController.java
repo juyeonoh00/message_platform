@@ -31,4 +31,10 @@ public class AuthController {
         AuthResponse response = authService.refreshToken(request);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/kakao")
+    public ResponseEntity<AuthResponse> kakaoLogin(@Valid @RequestBody KakaoLoginRequest request) {
+        AuthResponse response = authService.kakaoLogin(request);
+        return ResponseEntity.ok(response);
+    }
 }

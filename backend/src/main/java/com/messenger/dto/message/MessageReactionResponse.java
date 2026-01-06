@@ -22,8 +22,8 @@ public class MessageReactionResponse {
     public static MessageReactionResponse from(MessageReaction reaction) {
         return MessageReactionResponse.builder()
                 .id(reaction.getId())
-                .messageId(reaction.getMessageId())
-                .userId(reaction.getUserId())
+                .messageId(reaction.getMessage().getId())
+                .userId(reaction.getUser().getId())
                 .emoji(reaction.getEmoji())
                 .createdAt(reaction.getCreatedAt())
                 .build();

@@ -2,6 +2,8 @@ package com.messenger.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "mentions",
@@ -30,6 +32,7 @@ public class Mention {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "message_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Message message;
 
     @Column(name = "mentioned_user_id")

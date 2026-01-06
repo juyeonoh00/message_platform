@@ -24,7 +24,7 @@ public class DocumentCategoryResponse {
         return DocumentCategoryResponse.builder()
                 .id(category.getId())
                 .name(category.getName())
-                .workspaceId(category.getWorkspaceId())
+                .workspaceId(category.getWorkspace().getId())
                 .createdAt(category.getCreatedAt())
                 .documents(documents)
                 .build();

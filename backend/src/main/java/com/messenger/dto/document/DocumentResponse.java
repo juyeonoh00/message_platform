@@ -31,9 +31,9 @@ public class DocumentResponse {
                 .fileUrl(document.getFileUrl())
                 .fileSize(document.getFileSize())
                 .contentType(document.getContentType())
-                .categoryId(document.getCategoryId())
-                .workspaceId(document.getWorkspaceId())
-                .uploaderId(document.getUploaderId())
+                .categoryId(document.getCategory().getId())
+                .workspaceId(document.getWorkspace().getId())
+                .uploaderId(document.getUploader().getId())
                 .uploaderName(uploaderName)
                 .uploadedAt(document.getUploadedAt())
                 .build();

@@ -28,8 +28,8 @@ public class ElasticsearchService {
     private final ElasticsearchClient elasticsearchClient;
 
     public List<MessageDocument> searchMessages(Long workspaceId, Long channelId,
-                                                 String keyword, LocalDateTime startTime,
-                                                 LocalDateTime endTime) {
+                                                String keyword, LocalDateTime startTime,
+                                                LocalDateTime endTime) {
         try {
             List<Query> queries = new ArrayList<>();
 
@@ -82,40 +82,6 @@ public class ElasticsearchService {
         } catch (IOException e) {
             log.error("Error searching messages", e);
             return new ArrayList<>();
-        }
-    }
-
-    public void deleteMessage(Long messageId) {
-        try {
-            DeleteRequest request = DeleteRequest.of(d -> d
-                    .index(INDEX_NAME)
-                    .id(String.valueOf(messageId))
-            );
-
-            elasticsearchClient.delete(request);
-            log.debug("Deleted message from index: {}", messageId);
-
-        } catch (IOException e) {
-            log.error("Error deleting message from index", e);
-        }
-    }
-
-    public void deleteMessagesByChannelId(Long channelId) {
-        try {
-            co.elastic.clients.elasticsearch.core.DeleteByQueryRequest request =
-                    co.elastic.clients.elasticsearch.core.DeleteByQueryRequest.of(d -> d
-                            .index(INDEX_NAME)
-                            .query(q -> q.term(t -> t
-                                    .field("channelId")
-                                    .value(channelId)
-                            ))
-                    );
-
-            elasticsearchClient.deleteByQuery(request);
-            log.debug("Deleted all messages for channel: {}", channelId);
-
-        } catch (IOException e) {
-            log.error("Error deleting messages by channel ID from index", e);
         }
     }
 }

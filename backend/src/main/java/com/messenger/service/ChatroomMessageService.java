@@ -3,6 +3,7 @@ package com.messenger.service;
 import com.messenger.dto.chatroom.ChatroomMessageResponse;
 import com.messenger.dto.chatroom.SendChatroomMessageRequest;
 import com.messenger.dto.chatroom.UpdateChatroomReadStateRequest;
+import com.messenger.dto.notification.CreateMentionNotificationRequest;
 import com.messenger.entity.*;
 import com.messenger.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class ChatroomMessageService {
     private final UserRepository userRepository;
     private final ChatroomMentionRepository chatroomMentionRepository;
     private final ChatroomReadStateRepository chatroomReadStateRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public ChatroomMessageResponse sendMessage(Long userId, SendChatroomMessageRequest request) {
@@ -50,7 +52,6 @@ public class ChatroomMessageService {
                 .build();
 
         message = chatroomMessageRepository.save(message);
-        System.out.println("Chatroom message saved with ID: " + message.getId());
 
         // TODO: Index message in Elasticsearch
 
@@ -79,8 +80,20 @@ public class ChatroomMessageService {
                         .build());
 
                 // Create notification for mention in chatroom
-                String notificationContent = user.getName() + "님이 DM에서 멘션했습니다: " +
-                        (request.getContent().length() > 50 ? request.getContent().substring(0, 50) + "..." : request.getContent());
+                notificationService.createMentionNotification(
+                        CreateMentionNotificationRequest.builder()
+                                .userId(mentionedUserId)
+                                .workspaceId(null)
+                                .channelId(null)
+                                .chatroomId(chatroom.getId())
+                                .messageId(message.getId())
+                                .senderId(user.getId())
+                                .senderName(user.getName())
+                                .senderAvatarUrl(user.getAvatarUrl())
+                                .messageContent(request.getContent())
+                                .mentionType(mentionType)
+                                .build()
+                );
             }
         }
 
@@ -110,8 +123,20 @@ public class ChatroomMessageService {
                         .build());
 
                 // Create notification for channel mention in chatroom
-                String notificationContent = user.getName() + "님이 DM에서 @everyone으로 멘션했습니다: " +
-                        (request.getContent().length() > 50 ? request.getContent().substring(0, 50) + "..." : request.getContent());
+                notificationService.createMentionNotification(
+                        CreateMentionNotificationRequest.builder()
+                                .userId(member.getUser().getId())
+                                .workspaceId(null)
+                                .channelId(null)
+                                .chatroomId(chatroom.getId())
+                                .messageId(message.getId())
+                                .senderId(user.getId())
+                                .senderName(user.getName())
+                                .senderAvatarUrl(user.getAvatarUrl())
+                                .messageContent(request.getContent())
+                                .mentionType("channel")
+                                .build()
+                );
             }
         }
 
@@ -141,7 +166,6 @@ public class ChatroomMessageService {
 
         Pageable pageable = PageRequest.of(page, size);
         Page<ChatroomMessage> messages = chatroomMessageRepository.findByChatroomIdAndIsDeletedFalseOrderByCreatedAtAsc(chatroomId, pageable);
-        System.out.println("Loaded " + messages.getContent().size() + " messages for chatroom " + chatroomId);
 
         return messages.stream()
                 .map(this::toChatroomMessageResponse)

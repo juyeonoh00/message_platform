@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface DocumentCategoryRepository extends JpaRepository<DocumentCategory, Long> {
-    List<DocumentCategory> findByWorkspaceId(Long workspaceId);
+    List<DocumentCategory> findByWorkspace_Id(Long workspaceId);
 }

@@ -12,14 +12,14 @@ import java.util.Optional;
 @Repository
 public interface MessageReactionRepository extends JpaRepository<MessageReaction, Long> {
 
-    List<MessageReaction> findByMessageId(Long messageId);
+    List<MessageReaction> findByMessage_Id(Long messageId);
 
-    List<MessageReaction> findByMessageIdIn(List<Long> messageIds);
+    List<MessageReaction> findByMessage_IdIn(List<Long> messageIds);
 
-    Optional<MessageReaction> findByMessageIdAndUserIdAndEmoji(Long messageId, Long userId, String emoji);
+    Optional<MessageReaction> findByMessage_IdAndUser_IdAndEmoji(Long messageId, Long userId, String emoji);
 
-    void deleteByMessageIdAndUserIdAndEmoji(Long messageId, Long userId, String emoji);
+    void deleteByMessage_IdAndUser_IdAndEmoji(Long messageId, Long userId, String emoji);
 
-    @Query("SELECT mr FROM MessageReaction mr WHERE mr.messageId IN :messageIds")
+    @Query("SELECT mr FROM MessageReaction mr WHERE mr.message.id IN :messageIds")
     List<MessageReaction> findAllByMessageIds(@Param("messageIds") List<Long> messageIds);
 }

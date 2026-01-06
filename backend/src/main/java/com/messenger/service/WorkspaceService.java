@@ -4,12 +4,14 @@ import com.messenger.dto.workspace.*;
 import com.messenger.entity.*;
 import com.messenger.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WorkspaceService {
@@ -17,6 +19,10 @@ public class WorkspaceService {
     private final WorkspaceRepository workspaceRepository;
     private final WorkspaceMemberRepository workspaceMemberRepository;
     private final UserRepository userRepository;
+    private final ChannelRepository channelRepository;
+    private final MessageRepository messageRepository;
+    private final RagApiClient ragApiClient;
+    private final ElasticsearchService elasticsearchService;
 
     @Transactional
     public WorkspaceResponse createWorkspace(Long userId, CreateWorkspaceRequest request) {
@@ -156,5 +162,39 @@ public class WorkspaceService {
                 .orElseThrow(() -> new RuntimeException("Member not found"));
 
         workspaceMemberRepository.delete(member);
+    }
+
+    @Transactional
+    public void deleteWorkspace(Long userId, Long workspaceId) {
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new RuntimeException("Workspace not found"));
+
+        // Only owner can delete workspace
+        if (!workspace.getOwnerId().equals(userId)) {
+            throw new RuntimeException("Only the workspace owner can delete this workspace");
+        }
+
+        // Delete all messages from RAG API (also deletes from Elasticsearch) before CASCADE deletion
+        List<Channel> channels = channelRepository.findByWorkspaceId(workspaceId);
+        for (Channel channel : channels) {
+            // Delete from RAG API
+            List<Message> messages = messageRepository.findByChannelId(channel.getId());
+            messages.forEach(msg -> {
+                if (msg.getChunkId() != null && !msg.getChunkId().isEmpty()) {
+                    try {
+                        ragApiClient.deleteChunk(msg.getChunkId(), "message_platform");
+                        log.debug("Deleted chunk from RAG API: chunkId={}", msg.getChunkId());
+                    } catch (Exception e) {
+                        log.error("Failed to delete chunk from RAG API: chunkId={}", msg.getChunkId(), e);
+                    }
+                }
+            });
+        }
+
+        // CASCADE will automatically delete:
+        // - workspace_members
+        // - channels (and their messages, members, read_states)
+        // - document_categories (and documents)
+        workspaceRepository.delete(workspace);
     }
 }

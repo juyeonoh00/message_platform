@@ -51,6 +51,9 @@ dependencies {
     // minIO
     implementation 'io.minio:minio:8.5.17'
 
+    // Firebase Cloud Messaging
+    implementation 'com.google.firebase:firebase-admin:9.2.0'
+
     // JSON
     implementation 'org.json:json:20231013'
 

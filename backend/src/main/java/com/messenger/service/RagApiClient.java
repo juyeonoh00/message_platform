@@ -31,7 +31,7 @@ import java.util.Map;
 @Component
 public class RagApiClient {
 
-    private static final String RAG_API_URL = "http://mugtelecom.asuscomm.com:8080";
+    private static final String RAG_API_URL = "http://221.143.23.118:8080";
     private static final int TOP_K = 1;
     private static final String LLM_TYPE = "qwen";
     private final WebClient webClient;
@@ -48,6 +48,28 @@ public class RagApiClient {
                 .baseUrl(RAG_API_URL)
                 .defaultHeader("Content-Type", "application/json")
                 .build();
+    }
+
+    /**
+     * 응답에서 출처 정보를 제거합니다.
+     * 예: [출처: 문서_1 | rerank: -1.900] 형식의 문자열 제거
+     *
+     * @param text 원본 텍스트
+     * @return 출처 정보가 제거된 텍스트
+     */
+    private String removeSourceCitations(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+
+        // [출처: ... | rerank: ...] 패턴 제거
+        // 정규표현식: \[출처:[^\]]*\]
+        String cleaned = text.replaceAll("\\[출처:[^\\]]*\\]", "");
+
+        // 연속된 공백을 하나로 합치고, 앞뒤 공백 제거
+        cleaned = cleaned.replaceAll("\\s+", " ").trim();
+
+        return cleaned;
     }
 
     /**
@@ -180,7 +202,12 @@ public class RagApiClient {
                     JSONObject jsonResponse = new JSONObject(response);
                     String answer = jsonResponse.optString("answer", "");
                     log.info("RAG API answer 필드 추출 완료 - 길이: {} 자", answer.length());
-                    return answer;
+
+                    // 출처 정보 제거 (예: [출처: 문서_1 | rerank: -1.900])
+                    String cleanedAnswer = removeSourceCitations(answer);
+                    log.info("출처 정보 제거 완료 - 길이: {} 자", cleanedAnswer.length());
+
+                    return cleanedAnswer;
                 } catch (Exception e) {
                     log.error("JSON 파싱 실패, 원본 응답 반환: {}", e.getMessage());
                     return response;

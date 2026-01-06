@@ -45,6 +45,9 @@ public class Notification {
     @Column(nullable = false)
     private Long senderId; // 알림을 발생시킨 사용자
 
+    private String senderName; // 알림 발송자 이름
+    private String senderAvatarUrl; // 알림 발송자 아바타
+
     @Column(nullable = false)
     private Boolean isRead = false;
 

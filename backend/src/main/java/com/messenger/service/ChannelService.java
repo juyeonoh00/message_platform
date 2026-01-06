@@ -5,6 +5,7 @@ import com.messenger.dto.user.UserResponse;
 import com.messenger.entity.*;
 import com.messenger.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChannelService {
@@ -25,6 +27,7 @@ public class ChannelService {
     private final ReadStateRepository readStateRepository;
     private final MentionRepository mentionRepository;
     private final ElasticsearchService elasticsearchService;
+    private final RagApiClient ragApiClient;
 
     @Transactional
     public ChannelResponse createChannel(Long userId, CreateChannelRequest request) {
@@ -200,12 +203,18 @@ public class ChannelService {
         List<ReadState> readStates = readStateRepository.findByChannelId(channelId);
         readStateRepository.deleteAll(readStates);
 
-        // Delete all messages from Elasticsearch
-        elasticsearchService.deleteMessagesByChannelId(channelId);
 
-        // Soft delete all messages in the channel
+        // Delete all messages from RAG API
         List<Message> messages = messageRepository.findByChannelId(channelId);
         messages.forEach(msg -> {
+            if (msg.getChunkId() != null && !msg.getChunkId().isEmpty()) {
+                try {
+                    ragApiClient.deleteChunk(msg.getChunkId(), "message_platform");
+                    log.debug("Deleted chunk from RAG API: chunkId={}", msg.getChunkId());
+                } catch (Exception e) {
+                    log.error("Failed to delete chunk from RAG API: chunkId={}", msg.getChunkId(), e);
+                }
+            }
             msg.setIsDeleted(true);
             msg.setContent("[삭제된 메시지]");
         });

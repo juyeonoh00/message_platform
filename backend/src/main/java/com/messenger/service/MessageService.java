@@ -1,6 +1,7 @@
 package com.messenger.service;
 
 import com.messenger.dto.message.*;
+import com.messenger.dto.notification.CreateMentionNotificationRequest;
 import com.messenger.dto.websocket.WebSocketMessage;
 import com.messenger.entity.*;
 import com.messenger.event.ChunkIdUpdateEvent;
@@ -34,10 +35,10 @@ public class MessageService {
     private final MentionRepository mentionRepository;
     private final ReadStateRepository readStateRepository;
     private final MessageReactionRepository reactionRepository;
-    private final ElasticsearchService elasticsearchService;
     private final RagApiClient ragApiClient;
     private final SimpMessagingTemplate messagingTemplate;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationService notificationService;
 
     @Transactional
     public MessageResponse sendMessage(Long userId, SendMessageRequest request) {
@@ -64,7 +65,6 @@ public class MessageService {
                 .build();
 
         message = messageRepository.save(message);
-        System.out.println("Message saved with ID: " + message.getId() + ", Parent ID: " + message.getParentMessageId());
 
         // Send to RAG API for ingestion (스레드 및 스레드 답변)
         // 트랜잭션 커밋 후 chunk_id를 업데이트하기 위해 이벤트 발행
@@ -100,8 +100,20 @@ public class MessageService {
                         .build());
 
                 // Create notification for mention
-                String notificationContent = user.getName() + "님이 메시지에서 멘션했습니다: " +
-                        (request.getContent().length() > 50 ? request.getContent().substring(0, 50) + "..." : request.getContent());
+                notificationService.createMentionNotification(
+                        CreateMentionNotificationRequest.builder()
+                                .userId(mentionedUserId)
+                                .workspaceId(channel.getWorkspace().getId())
+                                .channelId(channel.getId())
+                                .chatroomId(null)
+                                .messageId(message.getId())
+                                .senderId(user.getId())
+                                .senderName(user.getName())
+                                .senderAvatarUrl(user.getAvatarUrl())
+                                .messageContent(request.getContent())
+                                .mentionType(mentionType)
+                                .build()
+                );
             }
         }
 
@@ -131,8 +143,20 @@ public class MessageService {
                         .build());
 
                 // Create notification for channel mention
-                String notificationContent = user.getName() + "님이 @everyone으로 멘션했습니다: " +
-                        (request.getContent().length() > 50 ? request.getContent().substring(0, 50) + "..." : request.getContent());
+                notificationService.createMentionNotification(
+                        CreateMentionNotificationRequest.builder()
+                                .userId(member.getUser().getId())
+                                .workspaceId(channel.getWorkspace().getId())
+                                .channelId(channel.getId())
+                                .chatroomId(null)
+                                .messageId(message.getId())
+                                .senderId(user.getId())
+                                .senderName(user.getName())
+                                .senderAvatarUrl(user.getAvatarUrl())
+                                .messageContent(request.getContent())
+                                .mentionType("channel")
+                                .build()
+                );
             }
         }
 
@@ -167,7 +191,6 @@ public class MessageService {
         Pageable pageable = PageRequest.of(page, size);
         // Get top-level messages only (exclude thread replies) - ordered by createdAt ascending (oldest first)
         Page<Message> messages = messageRepository.findByChannelIdAndParentMessageIdIsNullAndIsDeletedFalseOrderByCreatedAtAsc(channelId, pageable);
-        System.out.println("Loaded " + messages.getContent().size() + " top-level messages for channel " + channelId);
 
         // Batch load reactions for all messages at once
         List<Long> messageIds = messages.stream()
@@ -217,14 +240,46 @@ public class MessageService {
             throw new RuntimeException("Not a member of this channel");
         }
 
-        ReadState readState = readStateRepository.findByChannelIdAndUserId(request.getChannelId(), userId)
-                .orElse(ReadState.builder()
-                        .channelId(request.getChannelId())
-                        .userId(userId)
-                        .build());
+        // 재시도 로직으로 동시성 문제 해결
+        int maxRetries = 3;
+        int retryCount = 0;
 
-        readState.setLastReadMessageId(request.getLastReadMessageId());
-        readStateRepository.save(readState);
+        while (retryCount < maxRetries) {
+            try {
+                ReadState readState = readStateRepository.findByChannelIdAndUserId(request.getChannelId(), userId)
+                        .orElse(null);
+
+                if (readState == null) {
+                    // 없으면 새로 생성
+                    readState = ReadState.builder()
+                            .channel(Channel.builder().id(request.getChannelId()).build())
+                            .user(User.builder().id(userId).build())
+                            .lastReadMessageId(request.getLastReadMessageId())
+                            .build();
+                } else {
+                    // 있으면 업데이트
+                    readState.setLastReadMessageId(request.getLastReadMessageId());
+                }
+
+                readStateRepository.save(readState);
+                return; // 성공하면 종료
+
+            } catch (Exception e) {
+                retryCount++;
+                if (retryCount >= maxRetries) {
+                    log.error("Failed to update read state after {} retries", maxRetries, e);
+                    // 마지막 재시도에서도 실패하면 조용히 무시 (읽음 상태는 중요하지 않음)
+                    return;
+                }
+                log.warn("Retrying updateReadState (attempt {}/{})", retryCount, maxRetries);
+                try {
+                    Thread.sleep(50 * retryCount); // 지수 백오프
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        }
     }
 
     // Batch load reactions for multiple messages at once
@@ -237,9 +292,9 @@ public class MessageService {
 
         Map<Long, Map<String, List<Long>>> result = new HashMap<>();
         for (MessageReaction reaction : allReactions) {
-            result.computeIfAbsent(reaction.getMessageId(), k -> new HashMap<>())
+            result.computeIfAbsent(reaction.getMessage().getId(), k -> new HashMap<>())
                     .computeIfAbsent(reaction.getEmoji(), k -> new ArrayList<>())
-                    .add(reaction.getUserId());
+                    .add(reaction.getUser().getId());
         }
 
         return result;
@@ -282,11 +337,11 @@ public class MessageService {
     // For single message (used by sendMessage and updateMessage)
     private MessageResponse toMessageResponse(Message message) {
         // Load reactions for this single message
-        List<MessageReaction> reactions = reactionRepository.findByMessageId(message.getId());
+        List<MessageReaction> reactions = reactionRepository.findByMessage_Id(message.getId());
         Map<String, List<Long>> reactionsMap = new HashMap<>();
         for (MessageReaction reaction : reactions) {
             reactionsMap.computeIfAbsent(reaction.getEmoji(), k -> new ArrayList<>())
-                    .add(reaction.getUserId());
+                    .add(reaction.getUser().getId());
         }
 
         return toMessageResponse(message, reactionsMap);

@@ -20,7 +20,7 @@ public class MessageReactionService {
 
     @Transactional
     public MessageReactionResponse toggleReaction(Long messageId, Long userId, String emoji) {
-        var existingReaction = reactionRepository.findByMessageIdAndUserIdAndEmoji(messageId, userId, emoji);
+        var existingReaction = reactionRepository.findByMessage_IdAndUser_IdAndEmoji(messageId, userId, emoji);
 
         if (existingReaction.isPresent()) {
             // Remove reaction
@@ -29,8 +29,8 @@ public class MessageReactionService {
         } else {
             // Add reaction
             MessageReaction reaction = MessageReaction.builder()
-                    .messageId(messageId)
-                    .userId(userId)
+                    .message(com.messenger.entity.Message.builder().id(messageId).build())
+                    .user(com.messenger.entity.User.builder().id(userId).build())
                     .emoji(emoji)
                     .build();
             MessageReaction saved = reactionRepository.save(reaction);
@@ -40,7 +40,7 @@ public class MessageReactionService {
 
     @Transactional(readOnly = true)
     public List<MessageReactionResponse> getReactionsByMessageId(Long messageId) {
-        return reactionRepository.findByMessageId(messageId)
+        return reactionRepository.findByMessage_Id(messageId)
                 .stream()
                 .map(MessageReactionResponse::from)
                 .collect(Collectors.toList());
@@ -56,7 +56,7 @@ public class MessageReactionService {
 
         Map<Long, List<MessageReactionResponse>> result = new HashMap<>();
         for (MessageReaction reaction : reactions) {
-            result.computeIfAbsent(reaction.getMessageId(), k -> new java.util.ArrayList<>())
+            result.computeIfAbsent(reaction.getMessage().getId(), k -> new java.util.ArrayList<>())
                     .add(MessageReactionResponse.from(reaction));
         }
 

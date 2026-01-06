@@ -5,6 +5,7 @@ import com.messenger.dto.chatroom.CreateChatroomRequest;
 import com.messenger.entity.*;
 import com.messenger.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatroomService {
@@ -20,22 +22,14 @@ public class ChatroomService {
     private final ChatroomMemberRepository chatroomMemberRepository;
     private final ChatroomMessageRepository chatroomMessageRepository;
     private final UserRepository userRepository;
-    private final WorkspaceRepository workspaceRepository;
-    private final WorkspaceMemberRepository workspaceMemberRepository;
+    private final ElasticsearchService elasticsearchService;
+    private final RagApiClient ragApiClient;
 
     @Transactional
     public ChatroomResponse createChatroom(Long userId, CreateChatroomRequest request) {
-        // Verify both users are workspace members
-        if (!workspaceMemberRepository.existsByWorkspaceIdAndUserId(request.getWorkspaceId(), userId)) {
-            throw new RuntimeException("You are not a member of this workspace");
-        }
-        if (!workspaceMemberRepository.existsByWorkspaceIdAndUserId(request.getWorkspaceId(), request.getTargetUserId())) {
-            throw new RuntimeException("Target user is not a member of this workspace");
-        }
-
         // Check if chatroom already exists
         Optional<Chatroom> existingChatroom = chatroomRepository.findDirectChatroomBetweenUsers(
-                request.getWorkspaceId(), userId, request.getTargetUserId());
+                userId, request.getTargetUserId());
 
         if (existingChatroom.isPresent()) {
             Chatroom chatroom = existingChatroom.get();
@@ -50,7 +44,6 @@ public class ChatroomService {
 
             return ChatroomResponse.builder()
                     .id(chatroom.getId())
-                    .workspaceId(chatroom.getWorkspaceId())
                     .name(targetUser.getName())
                     .avatarUrl(targetUser.getAvatarUrl())
                     .targetUserId(targetUser.getId())
@@ -72,7 +65,6 @@ public class ChatroomService {
         String chatroomName = currentUser.getName() + ", " + targetUser.getName();
 
         Chatroom chatroom = Chatroom.builder()
-                .workspaceId(request.getWorkspaceId())
                 .name(chatroomName)
                 .createdBy(userId)
                 .build();
@@ -95,7 +87,6 @@ public class ChatroomService {
 
         return ChatroomResponse.builder()
                 .id(chatroom.getId())
-                .workspaceId(chatroom.getWorkspaceId())
                 .name(targetUser.getName())
                 .avatarUrl(targetUser.getAvatarUrl())
                 .targetUserId(targetUser.getId())
@@ -107,13 +98,8 @@ public class ChatroomService {
     }
 
     @Transactional(readOnly = true)
-    public List<ChatroomResponse> getChatroomsByUser(Long userId, Long workspaceId) {
-        // Verify user is workspace member
-        if (!workspaceMemberRepository.existsByWorkspaceIdAndUserId(workspaceId, userId)) {
-            throw new RuntimeException("Not a member of this workspace");
-        }
-
-        List<Chatroom> chatrooms = chatroomRepository.findByWorkspaceIdAndUserId(workspaceId, userId);
+    public List<ChatroomResponse> getChatroomsByUser(Long userId) {
+        List<Chatroom> chatrooms = chatroomRepository.findByUserId(userId);
 
         return chatrooms.stream()
                 .filter(chatroom -> !isHiddenByUser(chatroom, userId)) // 숨겨진 채팅방 제외
@@ -133,7 +119,6 @@ public class ChatroomService {
 
                     return ChatroomResponse.builder()
                             .id(chatroom.getId())
-                            .workspaceId(chatroom.getWorkspaceId())
                             .name(displayName)
                             .avatarUrl(avatarUrl)
                             .targetUserId(targetUserId)
@@ -171,7 +156,6 @@ public class ChatroomService {
 
         return ChatroomResponse.builder()
                 .id(chatroom.getId())
-                .workspaceId(chatroom.getWorkspaceId())
                 .name(displayName)
                 .avatarUrl(avatarUrl)
                 .targetUserId(targetUserId)
@@ -196,10 +180,23 @@ public class ChatroomService {
         Chatroom chatroom = chatroomRepository.findById(chatroomId)
                 .orElseThrow(() -> new RuntimeException("Chatroom not found"));
 
-        // Only creator or workspace admin can delete
+        // Only creator can delete
         if (!chatroom.getCreatedBy().equals(userId)) {
             throw new RuntimeException("Only the creator can delete this chatroom");
         }
+
+        // Delete all messages from RAG API (also deletes from Elasticsearch)
+        List<ChatroomMessage> messages = chatroomMessageRepository.findByChatroomId(chatroomId);
+        messages.forEach(msg -> {
+            if (msg.getChunkId() != null && !msg.getChunkId().isEmpty()) {
+                try {
+                    ragApiClient.deleteChunk(msg.getChunkId(), "message_platform");
+                    log.debug("Deleted chunk from RAG API: chunkId={}", msg.getChunkId());
+                } catch (Exception e) {
+                    log.error("Failed to delete chunk from RAG API: chunkId={}", msg.getChunkId(), e);
+                }
+            }
+        });
 
         // Delete all messages
         chatroomMessageRepository.deleteByChatroomId(chatroomId);

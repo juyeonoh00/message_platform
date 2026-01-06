@@ -2,6 +2,8 @@ package com.messenger.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -37,14 +39,20 @@ public class Document {
     @Column(nullable = false, length = 100)
     private String contentType;
 
-    @Column(nullable = false)
-    private Long categoryId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private DocumentCategory category;
 
-    @Column(nullable = false)
-    private Long workspaceId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workspace_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private Workspace workspace;
 
-    @Column(nullable = false)
-    private Long uploaderId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploader_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    private User uploader;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

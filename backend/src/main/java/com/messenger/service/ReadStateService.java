@@ -43,8 +43,8 @@ public class ReadStateService {
         } else {
             // 새 ReadState 생성
             ReadState readState = ReadState.builder()
-                    .channelId(channelId)
-                    .userId(userId)
+                    .channel(com.messenger.entity.Channel.builder().id(channelId).build())
+                    .user(com.messenger.entity.User.builder().id(userId).build())
                     .lastReadMessageId(lastReadMessageId)
                     .build();
 

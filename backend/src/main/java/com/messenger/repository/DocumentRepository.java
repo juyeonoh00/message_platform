@@ -8,6 +8,6 @@ import java.util.List;
 
 @Repository
 public interface DocumentRepository extends JpaRepository<Document, Long> {
-    List<Document> findByCategoryId(Long categoryId);
-    List<Document> findByWorkspaceId(Long workspaceId);
+    List<Document> findByCategory_Id(Long categoryId);
+    List<Document> findByWorkspace_Id(Long workspaceId);
 }
